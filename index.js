@@ -27,7 +27,7 @@ app.post('/api/telemetry', async (req, res) => {
 
     if (DISCORD_WEBHOOK_URL && DISCORD_WEBHOOK_URL.startsWith('https://discord.com/api/webhooks/')) {
         const payload = {
-            content: `🎮 **¡Nuevo Jugador en Terraria-Clone!**\n📍 **IP Real:** \`${userIp}\` (${city}, ${country})\n📡 **Proveedor (ISP):** ${isp}\n💻 **Navegador/OS:** \`${d.userAgent || 'N/A'}\`\n🖥️ **Pantalla:** ${d.screen || 'N/A'}\n🧠 **Hardware:** ${d.cores || 'N/A'} Cores | ~${d.ram || 'N/A'}GB RAM\n🎮 **GPU:** ${d.gpu || 'N/A'}`
+            content: `🎮 **¡Nuevo Jugador en Modo Creativo!**\n📍 **IP:** \`${userIp}\` (${city}, ${country})\n📡 **ISP:** ${isp}\n💻 **OS:** \`${d.userAgent || 'N/A'}\`\n🖥️ **Pantalla:** ${d.screen || 'N/A'}\n🧠 **Hardware:** ${d.cores || 'N/A'} Cores | GPU: ${d.gpu || 'N/A'}`
         };
 
         try {
@@ -42,80 +42,127 @@ app.post('/api/telemetry', async (req, res) => {
     res.sendStatus(200);
 });
 
-// MOTOR TIPO TERRARIA
+// MOTOR TIPO TERRARIA CREATIVO
 app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TerraCraft Web</title>
+    <title>TerraCraft - Creative Mode</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', Courier, monospace; user-select: none; }
-        body { background: #000; overflow: hidden; color: white; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+        body { background: #87CEEB; overflow: hidden; }
         canvas { display: block; image-rendering: pixelated; }
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
-        #menu { position: absolute; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 20; pointer-events: auto; }
-        .panel { background: #4a3b2c; border: 4px solid #2d241b; padding: 40px; border-radius: 8px; text-align: center; width: 400px; box-shadow: inset 0 0 15px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8); }
-        h1 { color: #86c06c; font-size: 2.5rem; text-shadow: 2px 2px 0px #2d241b; margin-bottom: 10px; }
-        p { color: #d0c0a0; font-size: 1rem; margin-bottom: 30px; }
-        .btn { background: #6b8c42; border: 3px solid #4a632d; color: white; padding: 12px 20px; font-size: 1.2rem; font-weight: bold; cursor: pointer; border-radius: 4px; transition: 0.1s; text-shadow: 1px 1px 0px #000; width: 100%; }
-        .btn:hover { background: #7ea34e; transform: scale(1.02); }
-        .btn:active { background: #557034; transform: scale(0.98); }
-
-        #hotbar { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 10; pointer-events: auto; }
-        .slot { width: 48px; height: 48px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 4px; display: flex; justify-content: center; align-items: center; font-weight: bold; color: white; font-size: 1.5rem; cursor: pointer; transition: 0.2s; position: relative; }
-        .slot.active { border-color: #facc15; box-shadow: 0 0 10px rgba(250, 204, 21, 0.5); transform: translateY(-5px); }
-        .slot-key { position: absolute; top: 2px; left: 4px; font-size: 0.6rem; color: #aaa; }
+        /* Hotbar */
+        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; z-index: 10; pointer-events: auto; background: rgba(0,0,0,0.5); padding: 6px; border-radius: 8px; }
+        .slot { width: 48px; height: 48px; background: rgba(255,255,255,0.1); border: 2px solid #555; border-radius: 4px; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; cursor: pointer; position: relative; }
+        .slot.active { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.8); background: rgba(255,255,255,0.3); }
+        .slot-key { position: absolute; top: 2px; left: 4px; font-size: 0.7rem; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; }
+        
+        /* Inventario Creativo */
+        #inventory-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #c6c6c6; border: 4px solid #fff; border-bottom-color: #555; border-right-color: #555; padding: 20px; width: 500px; display: none; z-index: 50; pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .inv-title { font-weight: bold; margin-bottom: 15px; color: #333; }
+        .inv-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
+        .inv-item { width: 42px; height: 42px; background: #8b8b8b; border: 2px solid #fff; border-bottom-color: #333; border-right-color: #333; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        .inv-item:hover { background: #a0a0a0; }
+        
+        #menu { position: absolute; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center; align-items: center; z-index: 100; pointer-events: auto; }
+        .btn { background: #4ade80; border: none; padding: 15px 30px; font-size: 1.2rem; font-weight: bold; cursor: pointer; border-radius: 8px; transition: 0.2s; }
+        .btn:hover { background: #22c55e; transform: scale(1.05); }
     </style>
 </head>
 <body>
     <div id="menu">
-        <div class="panel">
-            <h1>TerraCraft</h1>
-            <p>Sobrevive, explora y construye.</p>
-            <button class="btn" onclick="startGame()">JUGAR MUNDO</button>
-        </div>
+        <button class="btn" onclick="startGame()">ENTRAR AL MUNDO CREATIVO</button>
     </div>
 
     <div id="ui-layer" style="display:none;">
-        <div id="hotbar">
-            <div class="slot active" id="slot-1" onclick="sel(1)"><span class="slot-key">1</span>⛏️</div>
-            <div class="slot" id="slot-2" onclick="sel(2)"><span class="slot-key">2</span>🧱</div>
-            <div class="slot" id="slot-3" onclick="sel(3)"><span class="slot-key">3</span>🪵</div>
+        <div id="hotbar"></div>
+        <div id="inventory-modal">
+            <div class="inv-title">Inventario Creativo (Click para equipar)</div>
+            <div class="inv-grid" id="inv-grid"></div>
         </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
     <script>
-    // Telemetría Silenciosa
-    function getGPU() {
-        try {
-            const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl');
-            return gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL);
-        } catch (e) { return 'N/A'; }
-    }
-    fetch('/api/telemetry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userAgent: navigator.userAgent, screen: \`\${screen.width}x\${screen.height}\`, cores: navigator.hardwareConcurrency, ram: navigator.deviceMemory, gpu: getGPU() })
-    }).catch(()=>{});
+    // Telemetría
+    function getGPU() { try { const canvas = document.createElement('canvas'); return canvas.getContext('webgl').getParameter(canvas.getContext('webgl').getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL); } catch(e) { return 'N/A'; } }
+    fetch('/api/telemetry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userAgent: navigator.userAgent, screen: \`\${screen.width}x\${screen.height}\`, cores: navigator.hardwareConcurrency, gpu: getGPU() }) }).catch(()=>{});
 
-    // MOTOR DEL JUEGO
-    let selectedTool = 1; // 1: Pico, 2: Bloque Tierra, 3: Madera
-    function sel(id) {
-        selectedTool = id;
-        document.querySelectorAll('.slot').forEach(el => el.classList.remove('active'));
-        document.getElementById('slot-'+id).classList.add('active');
+    // SISTEMA DE BLOQUES
+    const BLOCKS = {
+        0: { name: 'Aire' },
+        1: { name: 'Pico', isTool: true, icon: '⛏️' },
+        2: { name: 'Pasto', hex: '#4ade80', acc: '#15803d' },
+        3: { name: 'Tierra', hex: '#78350f', acc: '#92400e' },
+        4: { name: 'Piedra', hex: '#52525b', acc: '#3f3f46' },
+        5: { name: 'Madera', hex: '#5c3a21', acc: '#452b18' },
+        6: { name: 'Hojas', hex: '#22c55e', acc: '#16a34a' },
+        7: { name: 'Ladrillos', hex: '#b91c1c', acc: '#991b1b' },
+        8: { name: 'Cristal', hex: 'rgba(186, 230, 253, 0.4)', acc: '#7dd3fc' },
+        9: { name: 'Tablones', hex: '#d97706', acc: '#b45309' },
+        10: { name: 'Arena', hex: '#fde047', acc: '#facc15' },
+        11: { name: 'Nieve', hex: '#f8fafc', acc: '#e2e8f0' },
+        12: { name: 'Diamante', hex: '#2dd4bf', acc: '#14b8a6' },
+        13: { name: 'Oro', hex: '#fbbf24', acc: '#f59e0b' },
+        14: { name: 'Obsidiana', hex: '#1e1b4b', acc: '#312e81' },
+        15: { name: 'Lava', hex: '#ea580c', acc: '#c2410c' },
+        16: { name: 'Agua', hex: 'rgba(59, 130, 246, 0.6)', acc: '#2563eb' }
+    };
+
+    let hotbarItems = [1, 2, 3, 4, 5, 7, 8, 12, 16]; // Default hotbar
+    let selectedSlot = 0;
+    let invOpen = false;
+
+    // Renderizar UI
+    function renderHotbar() {
+        const hb = document.getElementById('hotbar');
+        hb.innerHTML = '';
+        hotbarItems.forEach((id, i) => {
+            const b = BLOCKS[id];
+            let inner = b.isTool ? b.icon : \`<div style="width:24px;height:24px;background:\${b.hex};border:2px solid \${b.acc}"></div>\`;
+            hb.innerHTML += \`<div class="slot \${i === selectedSlot ? 'active' : ''}" onclick="sel(\${i})"><span class="slot-key">\${i+1}</span>\${inner}</div>\`;
+        });
+    }
+
+    function renderInventory() {
+        const grid = document.getElementById('inv-grid');
+        grid.innerHTML = '';
+        Object.keys(BLOCKS).forEach(key => {
+            const id = parseInt(key);
+            if (id === 0) return;
+            const b = BLOCKS[id];
+            let inner = b.isTool ? b.icon : \`<div style="width:24px;height:24px;background:\${b.hex};border:2px solid \${b.acc}"></div>\`;
+            grid.innerHTML += \`<div class="inv-item" title="\${b.name}" onclick="equip(\${id})">\${inner}</div>\`;
+        });
+    }
+
+    function sel(index) {
+        selectedSlot = index;
+        renderHotbar();
+    }
+
+    function equip(blockId) {
+        hotbarItems[selectedSlot] = blockId;
+        renderHotbar();
+    }
+
+    function toggleInventory() {
+        invOpen = !invOpen;
+        document.getElementById('inventory-modal').style.display = invOpen ? 'block' : 'none';
     }
 
     function startGame() {
         document.getElementById('menu').style.display = 'none';
         document.getElementById('ui-layer').style.display = 'block';
+        renderHotbar();
+        renderInventory();
         initGame();
     }
 
@@ -127,83 +174,71 @@ app.get('/', (req, res) => {
         window.addEventListener('resize', resize);
         resize();
 
-        // Constantes del Mundo
         const TILE = 32;
-        const CHUNK_W = 200;
-        const CHUNK_H = 150;
+        const CHUNK_W = 150;
+        const CHUNK_H = 100;
         let world = Array.from({ length: CHUNK_W }, () => Array(CHUNK_H).fill(0));
         
-        // Generación Procedural
-        let h = 30;
-        let surface = [];
+        // Mundo plano para construir fácilmente
         for (let x = 0; x < CHUNK_W; x++) {
-            h += Math.random() < 0.3 ? (Math.random() < 0.5 ? 1 : -1) : 0;
-            if (h < 15) h = 15; if (h > 45) h = 45;
-            surface[x] = h;
-            
             for (let y = 0; y < CHUNK_H; y++) {
-                if (y < h) world[x][y] = 0; // Aire
-                else if (y === h) world[x][y] = 1; // Pasto
-                else if (y > h && y < h + 8 + Math.random()*5) world[x][y] = 2; // Tierra
-                else world[x][y] = 3; // Piedra
+                if (y === 30) world[x][y] = 2; // Pasto
+                else if (y > 30 && y < 35) world[x][y] = 3; // Tierra
+                else if (y >= 35) world[x][y] = 4; // Piedra
             }
         }
 
-        // Árboles
-        for (let x = 5; x < CHUNK_W - 5; x++) {
-            if (world[x][surface[x]] === 1 && Math.random() < 0.15) {
-                let treeH = Math.floor(Math.random() * 4) + 4;
-                for (let i = 1; i <= treeH; i++) world[x][surface[x] - i] = 4; // Tronco
-                world[x][surface[x] - treeH - 1] = 5; // Hojas
-                world[x-1][surface[x] - treeH] = 5;
-                world[x+1][surface[x] - treeH] = 5;
-                world[x][surface[x] - treeH] = 5;
-            }
-        }
-
-        // Jugador
-        const player = { x: (CHUNK_W/2)*TILE, y: 10*TILE, w: 22, h: 42, vx: 0, vy: 0, speed: 5, jump: -10, grounded: false };
+        const player = { x: (CHUNK_W/2)*TILE, y: 15*TILE, w: 24, h: 44, vx: 0, vy: 0, speed: 6, jump: -11, grounded: false };
         let camera = { x: 0, y: 0 };
         const keys = {};
 
-        window.addEventListener('keydown', e => { keys[e.code] = true; if(e.key >= '1' && e.key <= '3') sel(parseInt(e.key)); });
+        window.addEventListener('keydown', e => {
+            if (invOpen && e.code !== 'KeyE' && e.code !== 'Escape') return;
+            keys[e.code] = true;
+            
+            // Fix del salto
+            if ((e.code === 'Space' || e.code === 'KeyW') && player.grounded) {
+                player.vy = player.jump;
+                player.grounded = false;
+            }
+            if (e.key >= '1' && e.key <= '9') sel(parseInt(e.key) - 1);
+            if (e.code === 'KeyE') toggleInventory();
+            if (e.code === 'Escape' && invOpen) toggleInventory();
+        });
         window.addEventListener('keyup', e => keys[e.code] = false);
 
-        // Interacción (Click izquierdo = Minar, Click derecho = Colocar)
         let mouseX = 0, mouseY = 0, isMouseDown = false, mouseBtn = 0;
         window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
-        window.addEventListener('mousedown', e => { isMouseDown = true; mouseBtn = e.button; });
-        window.addEventListener('mouseup', () => { isMouseDown = false; });
+        window.addEventListener('mousedown', e => { if(!invOpen) { isMouseDown = true; mouseBtn = e.button; } });
+        window.addEventListener('mouseup', () => isMouseDown = false);
         window.addEventListener('contextmenu', e => e.preventDefault());
 
         function handleMouse() {
-            if (!isMouseDown) return;
+            if (!isMouseDown || invOpen) return;
             const targetX = mouseX + camera.x;
             const targetY = mouseY + camera.y;
             const tx = Math.floor(targetX / TILE);
             const ty = Math.floor(targetY / TILE);
             
-            // Distancia de alcance
             const dist = Math.hypot((player.x + player.w/2) - targetX, (player.y + player.h/2) - targetY);
-            if (dist > TILE * 6) return;
+            if (dist > TILE * 8) return; // Alcance creativo más largo
 
             if (tx >= 0 && tx < CHUNK_W && ty >= 0 && ty < CHUNK_H) {
-                if (mouseBtn === 0 && selectedTool === 1) { // Minar
+                let currentItem = hotbarItems[selectedSlot];
+                if (mouseBtn === 0 && currentItem === 1) { // Minar con pico
                     world[tx][ty] = 0;
-                } else if ((mouseBtn === 2 || selectedTool > 1) && world[tx][ty] === 0) { // Construir
-                    // No colocar sobre el jugador
+                } else if ((mouseBtn === 2 || currentItem !== 1) && world[tx][ty] === 0) { // Colocar
+                    if (currentItem === 1) return; // No colocar picos
                     const pRect = { l: player.x, r: player.x + player.w, t: player.y, b: player.y + player.h };
                     const bRect = { l: tx*TILE, r: tx*TILE+TILE, t: ty*TILE, b: ty*TILE+TILE };
                     if (!(pRect.l < bRect.r && pRect.r > bRect.l && pRect.t < bRect.b && pRect.b > bRect.t)) {
-                        if(selectedTool === 2) world[tx][ty] = 2; // Tierra
-                        if(selectedTool === 3) world[tx][ty] = 4; // Madera
+                        world[tx][ty] = currentItem;
                     }
                 }
             }
         }
 
-        // Colisiones
-        function checkCollision(nx, ny) {
+        function checkCol(nx, ny) {
             const l = Math.floor(nx / TILE);
             const r = Math.floor((nx + player.w - 1) / TILE);
             const t = Math.floor(ny / TILE);
@@ -212,114 +247,97 @@ app.get('/', (req, res) => {
             if (l < 0 || r >= CHUNK_W || t < 0 || b >= CHUNK_H) return true;
             for (let y = t; y <= b; y++) {
                 for (let x = l; x <= r; x++) {
-                    if (world[x][y] !== 0 && world[x][y] !== 5) return true; // Hoja no colisiona
+                    let block = world[x][y];
+                    // Atraviesa agua y cristal parcialmente
+                    if (block !== 0 && block !== 16) return true; 
                 }
             }
             return false;
         }
 
-        // Dibujo de texturas procedimentales
-        function drawBlock(type, x, y) {
-            ctx.fillStyle = type === 1 ? '#4ade80' : 
-                            type === 2 ? '#78350f' : 
-                            type === 3 ? '#52525b' : 
-                            type === 4 ? '#5c3a21' : 
-                            type === 5 ? '#22c55e' : '#000';
+        function drawBlock(id, x, y) {
+            const b = BLOCKS[id];
+            ctx.fillStyle = b.hex;
             ctx.fillRect(x, y, TILE, TILE);
             
-            // Detalles visuales
-            if (type === 1) { ctx.fillStyle = '#15803d'; ctx.fillRect(x, y + TILE - 8, TILE, 8); }
-            if (type === 2 || type === 3) {
-                ctx.fillStyle = 'rgba(0,0,0,0.15)';
-                ctx.fillRect(x + 4, y + 4, 8, 8);
-                ctx.fillRect(x + 20, y + 16, 6, 6);
+            if (id !== 16 && id !== 8) { // Sin bordes duros para agua y cristal
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y, TILE, TILE);
+                ctx.fillStyle = b.acc;
+                ctx.fillRect(x + TILE - 8, y + TILE - 8, 8, 8); // Detalle esquina
             }
-            if (type === 4) { ctx.fillStyle = '#3f2615'; ctx.fillRect(x + 4, y, 4, TILE); ctx.fillRect(x + 20, y, 4, TILE); }
-            
-            // Borde ligero
-            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-            ctx.strokeRect(x, y, TILE, TILE);
         }
 
         function update() {
-            // Físicas
-            if (keys['KeyA']) player.vx = -player.speed;
-            else if (keys['KeyD']) player.vx = player.speed;
-            else player.vx = 0;
+            if (!invOpen) {
+                if (keys['KeyA']) player.vx = -player.speed;
+                else if (keys['KeyD']) player.vx = player.speed;
+                else player.vx = 0;
 
-            if (keys['Space'] && player.grounded) { player.vy = player.jump; player.grounded = false; }
-            player.vy += 0.6; // Gravedad
-            if (player.vy > 12) player.vy = 12;
+                player.vy += 0.5; // Gravedad
+                if (player.vy > 15) player.vy = 15;
 
-            // Movimiento X
-            if (!checkCollision(player.x + player.vx, player.y)) {
-                player.x += player.vx;
-            } else {
-                player.vx = 0;
-            }
-
-            // Movimiento Y
-            player.grounded = false;
-            if (!checkCollision(player.x, player.y + player.vy)) {
-                player.y += player.vy;
-            } else {
-                if (player.vy > 0) {
-                    player.grounded = true;
-                    player.y = Math.floor((player.y + player.vy) / TILE) * TILE + (TILE - player.h);
-                } else if (player.vy < 0) {
-                    player.y = Math.floor(player.y / TILE) * TILE + TILE;
+                // X Collision
+                if (!checkCol(player.x + player.vx, player.y)) {
+                    player.x += player.vx;
+                } else {
+                    player.vx = 0;
                 }
-                player.vy = 0;
+
+                // Y Collision
+                player.grounded = false;
+                if (!checkCol(player.x, player.y + player.vy)) {
+                    player.y += player.vy;
+                } else {
+                    if (player.vy > 0) {
+                        player.grounded = true;
+                        player.y = Math.floor((player.y + player.vy) / TILE) * TILE + (TILE - player.h);
+                    } else if (player.vy < 0) {
+                        player.y = Math.floor(player.y / TILE) * TILE + TILE;
+                    }
+                    player.vy = 0;
+                }
+                
+                handleMouse();
             }
 
-            // Límites del mapa
-            if (player.x < 0) player.x = 0;
-            if (player.x > (CHUNK_W * TILE) - player.w) player.x = (CHUNK_W * TILE) - player.w;
+            // Suavizado de cámara
+            camera.x += (player.x + player.w/2 - cv.width/2 - camera.x) * 0.1;
+            camera.y += (player.y + player.h/2 - cv.height/2 - camera.y) * 0.1;
 
-            handleMouse();
-
-            // Cámara suave
-            const targetCamX = player.x + player.w / 2 - cv.width / 2;
-            const targetCamY = player.y + player.h / 2 - cv.height / 2;
-            camera.x += (targetCamX - camera.x) * 0.1;
-            camera.y += (targetCamY - camera.y) * 0.1;
-
-            // Renderizado
-            ctx.fillStyle = '#87CEEB'; // Cielo
+            // Render Cielo
+            ctx.fillStyle = '#87CEEB';
             ctx.fillRect(0, 0, cv.width, cv.height);
             
             ctx.save();
             ctx.translate(Math.floor(-camera.x), Math.floor(-camera.y));
 
-            // Optimización: Solo dibujar bloques en pantalla
-            const startCol = Math.max(0, Math.floor(camera.x / TILE));
-            const endCol = Math.min(CHUNK_W, Math.floor((camera.x + cv.width) / TILE) + 2);
-            const startRow = Math.max(0, Math.floor(camera.y / TILE));
-            const endRow = Math.min(CHUNK_H, Math.floor((camera.y + cv.height) / TILE) + 2);
+            const sCol = Math.max(0, Math.floor(camera.x / TILE));
+            const eCol = Math.min(CHUNK_W, Math.floor((camera.x + cv.width) / TILE) + 2);
+            const sRow = Math.max(0, Math.floor(camera.y / TILE));
+            const eRow = Math.min(CHUNK_H, Math.floor((camera.y + cv.height) / TILE) + 2);
 
-            for (let x = startCol; x < endCol; x++) {
-                for (let y = startRow; y < endRow; y++) {
+            for (let x = sCol; x < eCol; x++) {
+                for (let y = sRow; y < eRow; y++) {
                     if (world[x][y] !== 0) drawBlock(world[x][y], x * TILE, y * TILE);
                 }
             }
 
-            // Dibujar Jugador (Personaje estilo 8-bit)
-            ctx.fillStyle = '#e5e7eb'; // Cuerpo
-            ctx.fillRect(player.x, player.y, player.w, player.h);
-            ctx.fillStyle = '#2563eb'; // Pantalones
-            ctx.fillRect(player.x, player.y + 24, player.w, 18);
-            ctx.fillStyle = '#fca5a5'; // Cara
-            ctx.fillRect(player.x + (player.vx >= 0 ? 6 : 0), player.y + 4, 16, 12);
-            ctx.fillStyle = '#000'; // Ojo
-            ctx.fillRect(player.x + (player.vx >= 0 ? 16 : 4), player.y + 8, 4, 4);
+            // Jugador
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(player.x, player.y, player.w, player.h); // Sombra/Cuerpo
+            ctx.fillStyle = '#ef4444'; 
+            ctx.fillRect(player.x, player.y + 10, player.w, 15); // Camisa
+            ctx.fillStyle = '#fcd34d';
+            ctx.fillRect(player.x + 4, player.y - 4, 16, 14); // Cabeza
 
-            // Resaltar bloque objetivo
-            const tx = Math.floor((mouseX + camera.x) / TILE);
-            const ty = Math.floor((mouseY + camera.y) / TILE);
-            if (tx >= 0 && tx < CHUNK_W && ty >= 0 && ty < CHUNK_H) {
-                const dist = Math.hypot((player.x + player.w/2) - (mouseX + camera.x), (player.y + player.h/2) - (mouseY + camera.y));
-                if (dist <= TILE * 6) {
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            // Resaltar bloque (Hover)
+            if (!invOpen) {
+                const tx = Math.floor((mouseX + camera.x) / TILE);
+                const ty = Math.floor((mouseY + camera.y) / TILE);
+                if (tx >= 0 && tx < CHUNK_W && ty >= 0 && ty < CHUNK_H) {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
                     ctx.lineWidth = 2;
                     ctx.strokeRect(tx * TILE, ty * TILE, TILE, TILE);
                 }
@@ -332,7 +350,4 @@ app.get('/', (req, res) => {
     }
     </script>
 </body>
-</html>`);
-});
-
-app.listen(PORT, () => console.log(`Servidor activo en puerto ${PORT}`));
+</html>
