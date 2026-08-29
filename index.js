@@ -616,4 +616,10 @@ app.get('/', (req, res) => {
     }
     </script>
 </body>
-</html>
+`); // Cierra el texto del HTML y la función res.send()
+});     // Cierra el bloque de app.get()
+
+// Inicia el servidor en el puerto asignado por Render
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en el puerto ${PORT}`);
+});
