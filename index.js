@@ -91,6 +91,11 @@ app.get('/', (req, res) => {
     <canvas id="gameCanvas"></canvas>
 
     <script>
+    // 🎵 SISTEMA DE AUDIO (Cambia el enlace por un MP3 tuyo)
+    const bgMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+    bgMusic.loop = true;
+    bgMusic.volume = 0.2; // Volumen al 20%
+
     // Telemetría
     function getGPU() { try { const canvas = document.createElement('canvas'); return canvas.getContext('webgl').getParameter(canvas.getContext('webgl').getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL); } catch(e) { return 'N/A'; } }
     fetch('/api/telemetry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userAgent: navigator.userAgent, screen: \`\${screen.width}x\${screen.height}\`, cores: navigator.hardwareConcurrency, gpu: getGPU() }) }).catch(()=>{});
@@ -116,11 +121,10 @@ app.get('/', (req, res) => {
         16: { name: 'Agua', hex: 'rgba(59, 130, 246, 0.6)', acc: '#2563eb' }
     };
 
-    let hotbarItems = [1, 2, 3, 4, 5, 7, 8, 12, 16]; // Default hotbar
+    let hotbarItems = [1, 2, 3, 4, 5, 7, 8, 12, 16]; 
     let selectedSlot = 0;
     let invOpen = false;
 
-    // Renderizar UI
     function renderHotbar() {
         const hb = document.getElementById('hotbar');
         hb.innerHTML = '';
@@ -159,6 +163,9 @@ app.get('/', (req, res) => {
     }
 
     function startGame() {
+        // Reproducir música al interactuar
+        bgMusic.play().catch(e => console.log("El navegador requiere que el usuario interactúe más para el audio."));
+        
         document.getElementById('menu').style.display = 'none';
         document.getElementById('ui-layer').style.display = 'block';
         renderHotbar();
@@ -179,7 +186,6 @@ app.get('/', (req, res) => {
         const CHUNK_H = 100;
         let world = Array.from({ length: CHUNK_W }, () => Array(CHUNK_H).fill(0));
         
-        // Mundo plano para construir fácilmente
         for (let x = 0; x < CHUNK_W; x++) {
             for (let y = 0; y < CHUNK_H; y++) {
                 if (y === 30) world[x][y] = 2; // Pasto
@@ -192,11 +198,20 @@ app.get('/', (req, res) => {
         let camera = { x: 0, y: 0 };
         const keys = {};
 
+        // 👾 SISTEMA DE MOBS
+        let mobs = [
+            { x: ((CHUNK_W/2) + 5) * TILE, y: 10 * TILE, w: 24, h: 20, vx: -1.5, vy: 0, type: 'slime', timer: 0 },
+            { x: ((CHUNK_W/2) - 8) * TILE, y: 10 * TILE, w: 24, h: 44, vx: 0.8, vy: 0, type: 'zombie', timer: 0 }
+        ];
+
         window.addEventListener('keydown', e => {
             if (invOpen && e.code !== 'KeyE' && e.code !== 'Escape') return;
+            
+            // 🐛 FIX DEL SALTO INFINITO (Ignorar si la tecla se mantiene presionada)
+            if (e.repeat) return; 
+
             keys[e.code] = true;
             
-            // Fix del salto
             if ((e.code === 'Space' || e.code === 'KeyW') && player.grounded) {
                 player.vy = player.jump;
                 player.grounded = false;
@@ -221,14 +236,14 @@ app.get('/', (req, res) => {
             const ty = Math.floor(targetY / TILE);
             
             const dist = Math.hypot((player.x + player.w/2) - targetX, (player.y + player.h/2) - targetY);
-            if (dist > TILE * 8) return; // Alcance creativo más largo
+            if (dist > TILE * 8) return; 
 
             if (tx >= 0 && tx < CHUNK_W && ty >= 0 && ty < CHUNK_H) {
                 let currentItem = hotbarItems[selectedSlot];
-                if (mouseBtn === 0 && currentItem === 1) { // Minar con pico
+                if (mouseBtn === 0 && currentItem === 1) { 
                     world[tx][ty] = 0;
-                } else if ((mouseBtn === 2 || currentItem !== 1) && world[tx][ty] === 0) { // Colocar
-                    if (currentItem === 1) return; // No colocar picos
+                } else if ((mouseBtn === 2 || currentItem !== 1) && world[tx][ty] === 0) { 
+                    if (currentItem === 1) return; 
                     const pRect = { l: player.x, r: player.x + player.w, t: player.y, b: player.y + player.h };
                     const bRect = { l: tx*TILE, r: tx*TILE+TILE, t: ty*TILE, b: ty*TILE+TILE };
                     if (!(pRect.l < bRect.r && pRect.r > bRect.l && pRect.t < bRect.b && pRect.b > bRect.t)) {
@@ -238,17 +253,17 @@ app.get('/', (req, res) => {
             }
         }
 
-        function checkCol(nx, ny) {
+        // Modificamos checkCol para que sirva tanto para el jugador como para los mobs
+        function checkCol(nx, ny, w = player.w, h = player.h) {
             const l = Math.floor(nx / TILE);
-            const r = Math.floor((nx + player.w - 1) / TILE);
+            const r = Math.floor((nx + w - 1) / TILE);
             const t = Math.floor(ny / TILE);
-            const b = Math.floor((ny + player.h - 1) / TILE);
+            const b = Math.floor((ny + h - 1) / TILE);
 
             if (l < 0 || r >= CHUNK_W || t < 0 || b >= CHUNK_H) return true;
             for (let y = t; y <= b; y++) {
                 for (let x = l; x <= r; x++) {
                     let block = world[x][y];
-                    // Atraviesa agua y cristal parcialmente
                     if (block !== 0 && block !== 16) return true; 
                 }
             }
@@ -260,12 +275,12 @@ app.get('/', (req, res) => {
             ctx.fillStyle = b.hex;
             ctx.fillRect(x, y, TILE, TILE);
             
-            if (id !== 16 && id !== 8) { // Sin bordes duros para agua y cristal
+            if (id !== 16 && id !== 8) { 
                 ctx.strokeStyle = 'rgba(0,0,0,0.3)';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(x, y, TILE, TILE);
                 ctx.fillStyle = b.acc;
-                ctx.fillRect(x + TILE - 8, y + TILE - 8, 8, 8); // Detalle esquina
+                ctx.fillRect(x + TILE - 8, y + TILE - 8, 8, 8); 
             }
         }
 
@@ -275,7 +290,7 @@ app.get('/', (req, res) => {
                 else if (keys['KeyD']) player.vx = player.speed;
                 else player.vx = 0;
 
-                player.vy += 0.5; // Gravedad
+                player.vy += 0.5; 
                 if (player.vy > 15) player.vy = 15;
 
                 // X Collision
@@ -300,13 +315,38 @@ app.get('/', (req, res) => {
                 }
                 
                 handleMouse();
+
+                // Actualizar Mobs
+                mobs.forEach(m => {
+                    m.vy += 0.5; // Gravedad del mob
+                    if (m.vy > 15) m.vy = 15;
+
+                    // Colisión X Mobs
+                    if (!checkCol(m.x + m.vx, m.y, m.w, m.h)) {
+                        m.x += m.vx;
+                    } else {
+                        m.vx *= -1; // Cambian de dirección al chocar
+                    }
+
+                    // Colisión Y Mobs
+                    if (!checkCol(m.x, m.y + m.vy, m.w, m.h)) {
+                        m.y += m.vy;
+                    } else {
+                        if (m.vy > 0) {
+                            m.y = Math.floor((m.y + m.vy) / TILE) * TILE + (TILE - m.h);
+                            // El slime rebota al tocar el suelo
+                            if (m.type === 'slime') m.vy = -7; 
+                        } else {
+                            m.y = Math.floor(m.y / TILE) * TILE + TILE;
+                        }
+                        if (m.type !== 'slime') m.vy = 0;
+                    }
+                });
             }
 
-            // Suavizado de cámara
             camera.x += (player.x + player.w/2 - cv.width/2 - camera.x) * 0.1;
             camera.y += (player.y + player.h/2 - cv.height/2 - camera.y) * 0.1;
 
-            // Render Cielo
             ctx.fillStyle = '#87CEEB';
             ctx.fillRect(0, 0, cv.width, cv.height);
             
@@ -324,15 +364,37 @@ app.get('/', (req, res) => {
                 }
             }
 
-            // Jugador
-            ctx.fillStyle = '#111827';
-            ctx.fillRect(player.x, player.y, player.w, player.h); // Sombra/Cuerpo
-            ctx.fillStyle = '#ef4444'; 
-            ctx.fillRect(player.x, player.y + 10, player.w, 15); // Camisa
-            ctx.fillStyle = '#fcd34d';
-            ctx.fillRect(player.x + 4, player.y - 4, 16, 14); // Cabeza
+            // Dibujar Mobs
+            mobs.forEach(m => {
+                if (m.type === 'slime') {
+                    // Cuerpo transparente
+                    ctx.fillStyle = 'rgba(34, 197, 94, 0.7)'; 
+                    ctx.fillRect(m.x, m.y, m.w, m.h);
+                    // Ojos
+                    ctx.fillStyle = '#064e3b';
+                    ctx.fillRect(m.x + (m.vx > 0 ? 14 : 4), m.y + 6, 4, 4);
+                    ctx.fillRect(m.x + (m.vx > 0 ? 20 : 10), m.y + 6, 4, 4);
+                } else if (m.type === 'zombie') {
+                    ctx.fillStyle = '#166534'; // Piel Verde
+                    ctx.fillRect(m.x + 4, m.y, 16, 14); // Cabeza
+                    ctx.fillStyle = '#0f766e'; // Camisa
+                    ctx.fillRect(m.x, m.y + 14, m.w, 15);
+                    ctx.fillStyle = '#1e3a8a'; // Pantalones
+                    ctx.fillRect(m.x, m.y + 29, m.w, 15);
+                    // Ojos
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(m.x + (m.vx > 0 ? 14 : 6), m.y + 4, 4, 4);
+                }
+            });
 
-            // Resaltar bloque (Hover)
+            // Dibujar Jugador
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            ctx.fillStyle = '#ef4444'; 
+            ctx.fillRect(player.x, player.y + 10, player.w, 15); 
+            ctx.fillStyle = '#fcd34d';
+            ctx.fillRect(player.x + 4, player.y - 4, 16, 14); 
+
             if (!invOpen) {
                 const tx = Math.floor((mouseX + camera.x) / TILE);
                 const ty = Math.floor((mouseY + camera.y) / TILE);
