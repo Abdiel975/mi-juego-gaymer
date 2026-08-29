@@ -350,4 +350,7 @@ app.get('/', (req, res) => {
     }
     </script>
 </body>
-</html>
+</html>`);
+});
+
+app.listen(PORT, () => console.log(`Servidor activo en puerto ${PORT}`));
