@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', true);
 app.use(express.json());
 
-const DISCORD_WEBHOOK_URL = "PEGA_AQUI_TU_WEBHOOK";
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1543161653523255379/_LaPPSocrBnSYKF0TD5gwCDMBl3FXjYyoImmLRiEd6AAl1c1F9IULR7m2--mgP6RN8Ea";
 
 // --- SERVIDOR MULTIJUGADOR (WEBSOCKETS NATIVOS) ---
 const clients = new Map();
