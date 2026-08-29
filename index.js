@@ -472,3 +472,9 @@ app.get('/', (req, res) => {
     </script>
 </body>
 </html>
+`);
+});
+
+app.listen(PORT, () => {
+    console.log(`Servidor iniciado en el puerto ${PORT}`);
+});
